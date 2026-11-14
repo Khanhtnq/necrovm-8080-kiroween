@@ -1,0 +1,16 @@
+{
+  "$schema": "https://kiro.dev/schemas/hooks/v1.json",
+  "name": "opcode-test-on-save",
+  "description": "Automatically validates 8080 opcode test suite and flag calculation upon source modification",
+  "events": [
+    "file:save"
+  ],
+  "triggers": [
+    {
+      "pattern": "src/**/*.mjs",
+      "command": "node --test tests/test_8080.mjs",
+      "timeoutMs": 5000,
+      "blocking": true
+    }
+  ]
+}

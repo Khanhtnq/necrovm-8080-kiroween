@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "necrovm-debugger": {
+      "command": "node",
+      "args": [
+        "src/mcp_debugger.mjs",
+        "--stdio"
+      ],
+      "env": {
+        "NECROVM_ENV": "development",
+        "NECROVM_CLOCK_HZ": "2000000"
+      },
+      "tools": [
+        "necro_inspect_registers",
+        "necro_step_cycles",
+        "necro_set_breakpoint",
+        "necro_read_memory_dump",
+        "necro_assemble_and_load"
+      ]
+    }
+  }
+}

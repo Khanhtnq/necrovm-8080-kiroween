@@ -1,0 +1,21 @@
+{
+  "name": "necrovm-8080",
+  "version": "1.0.0",
+  "description": "NecroVM 8080: Resurrecting 1974 CP/M Silicon Stitched to Modern MCP Agent Debugging",
+  "type": "module",
+  "main": "src/cpu8080.mjs",
+  "scripts": {
+    "test": "node --test tests/test_8080.mjs"
+  },
+  "keywords": [
+    "intel-8080",
+    "emulator",
+    "cpm-2.2",
+    "mcp",
+    "model-context-protocol",
+    "kiroween-2026",
+    "retro-computing"
+  ],
+  "author": "Khanhtnq <218711032+Khanhtnq@users.noreply.github.com>",
+  "license": "MIT"
+}
