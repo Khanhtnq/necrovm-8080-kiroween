@@ -1,15 +1,45 @@
 import os
+import sys
+import shutil
 import subprocess
 from PIL import Image, ImageDraw, ImageFont
 
-ffmpeg = r"C:\Users\ADMIN\AppData\Local\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"
-out_thumbnail = r"e:\BOUTY ARGON\workspaces\kiroween_necrovm_100k\assets\thumbnail_1280x800.png"
-out_video = r"e:\BOUTY ARGON\workspaces\kiroween_necrovm_100k\assets\demo_kiroween_1080p.mp4"
-temp_dir = r"e:\BOUTY ARGON\workspaces\kiroween_necrovm_100k\assets\temp_frames"
+# Base directories derived dynamically - zero hardcoded paths
+base_dir = os.path.dirname(os.path.abspath(__file__))
+out_thumbnail = os.path.join(base_dir, "assets", "thumbnail_1280x800.png")
+out_video = os.path.join(base_dir, "assets", "demo_kiroween_1080p.mp4")
+temp_dir = os.path.join(base_dir, "assets", "temp_frames")
+os.makedirs(os.path.dirname(out_thumbnail), exist_ok=True)
 os.makedirs(temp_dir, exist_ok=True)
 
-font_path = r"C:\Windows\Fonts\consola.ttf"
-font_path_bold = r"C:\Windows\Fonts\consolab.ttf"
+# Discover FFmpeg dynamically
+ffmpeg = shutil.which("ffmpeg")
+if not ffmpeg:
+    # Common Windows fallbacks if not in system PATH
+    fallbacks = [
+        os.path.expandvars(r"%LOCALAPPDATA%\Microsoft\WinGet\Packages\Gyan.FFmpeg_Microsoft.Winget.Source_8wekyb3d8bbwe\ffmpeg-8.1.1-full_build\bin\ffmpeg.exe"),
+        r"C:\ffmpeg\bin\ffmpeg.exe",
+        r"C:\Program Files\ffmpeg\bin\ffmpeg.exe"
+    ]
+    for fb in fallbacks:
+        if os.path.isfile(fb):
+            ffmpeg = fb
+            break
+
+if not ffmpeg:
+    print("Warning: FFmpeg binary not found in PATH or standard locations.", file=sys.stderr)
+
+# Discover fonts dynamically
+font_path = "consola.ttf"
+font_path_bold = "consolab.ttf"
+win_fonts = os.path.join(os.environ.get("SystemRoot", r"C:\Windows"), "Fonts")
+if os.path.isdir(win_fonts):
+    fp = os.path.join(win_fonts, "consola.ttf")
+    fpb = os.path.join(win_fonts, "consolab.ttf")
+    if os.path.isfile(fp):
+        font_path = fp
+    if os.path.isfile(fpb):
+        font_path_bold = fpb
 
 # ==========================================
 # 1. GENERATE THUMBNAIL (1280x800)
@@ -53,7 +83,6 @@ print("Thumbnail saved:", out_thumbnail)
 # ==========================================
 # 2. GENERATE VIDEO FRAMES (1920x1080)
 # ==========================================
-# 4 chapters: 10s each = 40s total
 chapters = [
     {
         "title": "CHAPTER 1: THE RESURRECTION",
@@ -105,9 +134,6 @@ f_v_bullet = ImageFont.truetype(font_path, 28)
 f_v_status = ImageFont.truetype(font_path_bold, 26)
 
 frame_files = []
-fps = 30
-total_frames = 40 * fps # 1200 frames
-
 print("Rendering video keyframes...")
 for ch_idx, ch in enumerate(chapters):
     frame_img = Image.new("RGB", (1920, 1080), color="#050a05")
@@ -142,24 +168,26 @@ for ch_idx, ch in enumerate(chapters):
     frame_img.save(slide_path)
     frame_files.append(slide_path)
 
-# Assemble 40s MP4 using FFmpeg concat/image filter
-print("Encoding 40s 1080p 30fps MP4 video with FFmpeg...")
-concat_script = os.path.join(temp_dir, "concat.txt")
-with open(concat_script, "w") as f:
-    for sf in frame_files:
-        f.write(f"file '{os.path.basename(sf)}'\n")
-        f.write("duration 10.0\n")
-    # Write last file entry for ffmpeg concat demuxer requirement
-    f.write(f"file '{os.path.basename(frame_files[-1])}'\n")
+if ffmpeg:
+    print("Encoding 40s 1080p 30fps MP4 video with FFmpeg...")
+    concat_script = os.path.join(temp_dir, "concat.txt")
+    with open(concat_script, "w") as f:
+        for sf in frame_files:
+            f.write(f"file '{os.path.basename(sf)}'\n")
+            f.write("duration 10.0\n")
+        f.write(f"file '{os.path.basename(frame_files[-1])}'\n")
 
-audio_filter = "sine=f=440:r=44100:d=40,volume=0.02"
+    audio_filter = "sine=f=440:r=44100:d=40,volume=0.02"
 
-cmd_encode = [
-    ffmpeg, "-f", "concat", "-safe", "0", "-i", concat_script,
-    "-f", "lavfi", "-i", audio_filter,
-    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
-    "-c:a", "aac", "-b:a", "128k", "-t", "40", "-y", out_video
-]
+    cmd_encode = [
+        ffmpeg, "-f", "concat", "-safe", "0", "-i", concat_script,
+        "-f", "lavfi", "-i", audio_filter,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
+        "-c:a", "aac", "-b:a", "128k", "-t", "40", "-y", out_video
+    ]
 
-subprocess.run(cmd_encode, check=True, cwd=temp_dir)
-print("Demo Video generated successfully:", out_video)
+    subprocess.run(cmd_encode, check=True, cwd=temp_dir)
+    print("Demo Video generated successfully:", out_video)
+
+# Clean up temp frames
+shutil.rmtree(temp_dir, ignore_errors=True)
